@@ -4,6 +4,8 @@ Jogo online estilo *Crossy Road / Frogger*: ajude a galinha a atravessar a rua d
 
 ## 🎮 Como jogar
 
+https://publiosantos.github.io/galinha-atravessa-rua/
+
 - **Computador:** use as setas do teclado ou `WASD` para mover a galinha. `P` ou `Espaço` pausa.
 - **Celular:** use os botões coloridos na tela (segure para mover continuamente) ou deslize o dedo sobre o jogo.
 - Chegue à linha de chegada (faixa xadrez no topo) para completar o nível.
@@ -14,13 +16,7 @@ Jogo online estilo *Crossy Road / Frogger*: ajude a galinha a atravessar a rua d
 
 Basta abrir o arquivo `index.html` em qualquer navegador moderno (Chrome, Edge, Firefox, Safari). Não precisa de servidor nem de instalação.
 
-## 🌐 Publicar no GitHub Pages
 
-1. Crie um repositório público no GitHub e faça upload do `index.html` (e deste `README.md`).
-2. No repositório, vá em **Settings → Pages**.
-3. Em **Source**, escolha **Deploy from a branch**, selecione a branch `main` e a pasta `/ (root)`. Clique em **Save**.
-4. Aguarde cerca de 1–2 minutos. O jogo estará disponível em:
-   `https://SEU-USUARIO.github.io/NOME-DO-REPOSITORIO/`
 
 ## 🛠️ Tecnologias
 
