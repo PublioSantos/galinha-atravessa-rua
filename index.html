@@ -106,7 +106,7 @@
   var carColors=['#e74c3c','#3498db','#f1c40f','#9b59b6','#1abc9c','#e67e22','#ecf0f1','#e84393'];
   var lanes=[];
   var roadRows=[];
-  var chicken={col:5,row:11,x:220,y:460,tx:220,ty:460,moving:false,invuln:0,face:-Math.PI/2,roll:0,knock:null};
+  var chicken={col:5,row:11,x:220,y:460,tx:220,ty:460,moving:false,invuln:0,face:-Math.PI/2,roll:0,knock:null,stunned:false};
 
   var AC=null, master=null, bgmTimer=null, bgmStep=0;
   var melody=[523,659,784,659,587,698,880,698,784,659,587,523,659,587,523,440];
@@ -172,9 +172,10 @@
     var newRow=Math.min(chicken.row+2,11); // 2 positions back toward the start
     var tx=chicken.col*CELL+CELL/2, ty=newRow*CELL+CELL/2;
     chicken.row=newRow;
-    chicken.knock={active:true,t:0,dur:0.4,sx:chicken.x,sy:chicken.y,tx:tx,ty:ty};
+    chicken.knock={active:true,t:0,dur:0.15,sx:chicken.x,sy:chicken.y,tx:tx,ty:ty};
     chicken.moving=true;
-    chicken.invuln=Math.max(chicken.invuln,1.4);
+    chicken.stunned=true; // short stun protection — lost as soon as the player moves
+    chicken.invuln=1.2;
   }
 
   function laneCountFor(n){ return Math.min(4+n, 10); }
@@ -210,16 +211,23 @@
     chicken.col=5; chicken.row=11;
     chicken.x=chicken.tx=5*CELL+CELL/2;
     chicken.y=chicken.ty=11*CELL+CELL/2;
-    chicken.moving=false; chicken.invuln=0; chicken.face=-Math.PI/2; chicken.roll=0; chicken.knock=null;
+    chicken.moving=false; chicken.invuln=0; chicken.face=-Math.PI/2; chicken.roll=0; chicken.knock=null; chicken.stunned=false;
     furthest=11; levelTime=0; particles=[];
   }
   function isRoad(r){ return roadRows.indexOf(r)>=0; }
 
   function tryMove(dc,dr){
     if(state!=='playing'||paused) return;
+    // knockback roll is interruptible: player takes control immediately (no delay)
+    if(chicken.knock && chicken.knock.active){
+      chicken.x=chicken.knock.tx; chicken.y=chicken.knock.ty;
+      chicken.knock.active=null; chicken.moving=false; chicken.roll=0;
+    }
     if(chicken.moving) return;
     var nc=chicken.col+dc, nr=chicken.row+dr;
     if(nc<0||nc>=COLS||nr<0||nr>=ROWS) return;
+    // moving while stunned (side-hit protection) cancels the protection
+    if(chicken.stunned){ chicken.stunned=false; chicken.invuln=0; }
     chicken.col=nc; chicken.row=nr;
     chicken.tx=nc*CELL+CELL/2; chicken.ty=nr*CELL+CELL/2;
     chicken.moving=true;
@@ -247,7 +255,7 @@
     chicken.row=11;
     chicken.x=chicken.tx=chicken.col*CELL+CELL/2;
     chicken.y=chicken.ty=11*CELL+CELL/2;
-    chicken.moving=false; furthest=11; chicken.roll=0; chicken.knock=null;
+    chicken.moving=false; furthest=11; chicken.roll=0; chicken.knock=null; chicken.stunned=false;
   }
   function levelComplete(){
     state='levelcomplete'; sLevel();
@@ -386,7 +394,7 @@
         chicken.x+=dx/d*step; chicken.y+=dy/d*step;
       }
     }
-    if(chicken.invuln>0) chicken.invuln-=dt;
+    if(chicken.invuln>0){ chicken.invuln-=dt; if(chicken.invuln<=0) chicken.stunned=false; }
     updateCars(dt);
     if(chicken.invuln<=0 && !(chicken.knock&&chicken.knock.active)){
       var cx=chicken.x, cy=chicken.y;
