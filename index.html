@@ -106,7 +106,7 @@
   var carColors=['#e74c3c','#3498db','#f1c40f','#9b59b6','#1abc9c','#e67e22','#ecf0f1','#e84393'];
   var lanes=[];
   var roadRows=[];
-  var chicken={col:5,row:11,x:220,y:460,tx:220,ty:460,moving:false,invuln:0,face:-Math.PI/2};
+  var chicken={col:5,row:11,x:220,y:460,tx:220,ty:460,moving:false,invuln:0,face:-Math.PI/2,roll:0,knock:null};
 
   var AC=null, master=null, bgmTimer=null, bgmStep=0;
   var melody=[523,659,784,659,587,698,880,698,784,659,587,523,659,587,523,440];
@@ -157,6 +157,25 @@
   function sHit(){ noiseBurst(0.25,0.3); tone(130,0.35,'sawtooth',0.22); tone(90,0.4,'sine',0.2,0.05); }
   function sLevel(){ [523,659,784,1047,1319].forEach(function(f,i){ tone(f,0.16,'triangle',0.18,i*0.09); }); }
   function sOver(){ [392,330,262,196,147].forEach(function(f,i){ tone(f,0.22,'triangle',0.18,i*0.14); }); }
+  function sBonk(){ tone(220,0.12,'square',0.16); tone(140,0.22,'sawtooth',0.14,0.05); }
+  function spawnStars(){
+    for(var i=0;i<10;i++){
+      var a=Math.random()*Math.PI*2, sp=50+Math.random()*120;
+      particles.push({x:chicken.x,y:chicken.y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-60,life:0.5+Math.random()*0.3,size:3+Math.random()*3,color:Math.random()<0.5?'#ffd93d':'#ffffff',rot:Math.random()*6,type:'star'});
+    }
+  }
+  // Side/side-rear hit: chicken rolls back 2 positions and loses points (does NOT die)
+  function sideKnock(){
+    if(chicken.knock && chicken.knock.active) return;
+    score=Math.max(0,score-20);
+    sBonk(); spawnStars(); updateHUD();
+    var newRow=Math.min(chicken.row+2,11); // 2 positions back toward the start
+    var tx=chicken.col*CELL+CELL/2, ty=newRow*CELL+CELL/2;
+    chicken.row=newRow;
+    chicken.knock={active:true,t:0,dur:0.4,sx:chicken.x,sy:chicken.y,tx:tx,ty:ty};
+    chicken.moving=true;
+    chicken.invuln=Math.max(chicken.invuln,1.4);
+  }
 
   function laneCountFor(n){ return Math.min(4+n, 10); }
   function setupLevel(n){
@@ -191,7 +210,7 @@
     chicken.col=5; chicken.row=11;
     chicken.x=chicken.tx=5*CELL+CELL/2;
     chicken.y=chicken.ty=11*CELL+CELL/2;
-    chicken.moving=false; chicken.invuln=0; chicken.face=-Math.PI/2;
+    chicken.moving=false; chicken.invuln=0; chicken.face=-Math.PI/2; chicken.roll=0; chicken.knock=null;
     furthest=11; levelTime=0; particles=[];
   }
   function isRoad(r){ return roadRows.indexOf(r)>=0; }
@@ -228,7 +247,7 @@
     chicken.row=11;
     chicken.x=chicken.tx=chicken.col*CELL+CELL/2;
     chicken.y=chicken.ty=11*CELL+CELL/2;
-    chicken.moving=false; furthest=11;
+    chicken.moving=false; furthest=11; chicken.roll=0; chicken.knock=null;
   }
   function levelComplete(){
     state='levelcomplete'; sLevel();
@@ -349,7 +368,15 @@
   }
   function update(dt){
     levelTime+=dt;
-    if(chicken.moving){
+    if(chicken.knock && chicken.knock.active){
+      var kk=chicken.knock;
+      kk.t+=dt/kk.dur;
+      var k=Math.min(kk.t,1), e=1-Math.pow(1-k,2);
+      chicken.x=kk.sx+(kk.tx-kk.sx)*e;
+      chicken.y=kk.sy+(kk.ty-kk.sy)*e;
+      chicken.roll=e*Math.PI*3; // rolling animation
+      if(k>=1){ chicken.knock.active=null; chicken.moving=false; chicken.x=kk.tx; chicken.y=kk.ty; chicken.roll=0; }
+    } else if(chicken.moving){
       var dx=chicken.tx-chicken.x, dy=chicken.ty-chicken.y;
       var d=Math.sqrt(dx*dx+dy*dy), step=340*dt;
       if(d<=step){
@@ -361,7 +388,7 @@
     }
     if(chicken.invuln>0) chicken.invuln-=dt;
     updateCars(dt);
-    if(chicken.invuln<=0){
+    if(chicken.invuln<=0 && !(chicken.knock&&chicken.knock.active)){
       var cx=chicken.x, cy=chicken.y;
       for(var i=0;i<lanes.length;i++){
         var L=lanes[i], ly=L.row*CELL;
@@ -369,7 +396,12 @@
         for(var j=0;j<L.cars.length;j++){
           var c=L.cars[j];
           if(cx+10>c.x+4 && cx-10<c.x+c.w-4 && cy+9>ly+5 && cy-9<ly+CELL-5){
-            hit(); return;
+            // overlap amounts decide: vertical-dominant = side hit; horizontal + front half = front hit (deadly)
+            var ox=Math.min(cx+10,c.x+c.w-4)-Math.max(cx-10,c.x+4);
+            var oy=Math.min(cy+9,ly+CELL-5)-Math.max(cy-9,ly+5);
+            var frontHalf=(L.dir>0)?(cx>c.x+c.w/2):(cx<c.x+c.w/2);
+            if(ox<=oy && frontHalf){ hit(); } else { sideKnock(); }
+            return;
           }
         }
       }
@@ -485,7 +517,7 @@
     if(chicken.invuln>0 && Math.floor(chicken.invuln*10)%2===0){ ctx.globalAlpha=0.4; }
     ctx.save();
     ctx.translate(chicken.x, chicken.y);
-    ctx.rotate(chicken.face+Math.PI/2);
+    ctx.rotate(chicken.face+Math.PI/2+(chicken.roll||0));
     var bob=chicken.moving? Math.sin(performance.now()/40)*1.5 : 0;
     ctx.translate(0,bob);
     ctx.strokeStyle='#ff8c42'; ctx.lineWidth=2.5; ctx.lineCap='round';
@@ -618,3 +650,4 @@
 })();
 </script>
 </body>
+</html>
