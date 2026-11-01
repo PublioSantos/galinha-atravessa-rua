@@ -1,6 +1,6 @@
 # 🐔 Galinha Atravessa a Rua
 
-Jogo online estilo *Crossy Road / Frogger*: ajude a galinha a atravessar a rua desviando dos carros. Multinível, com som, e funciona no navegador e no celular.
+Jogo online inspirado FreeWay do Atari *: ajude a galinha a atravessar a rua desviando dos carros. Multinível, com som, e funciona no navegador e no celular.
 
 ## 🎮 Como jogar
 
