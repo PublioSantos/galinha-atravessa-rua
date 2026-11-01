@@ -1,4 +1,4 @@
-# 🐔 Galinha Atravessa a Rua
+# 🐔 A Galinha Atravessa a Rua
 
 Jogo online inspirado FreeWay do Atari *: ajude a galinha a atravessar a rua desviando dos carros. Multinível, com som, e funciona no navegador e no celular.
 
