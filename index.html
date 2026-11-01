@@ -178,15 +178,15 @@
     chicken.invuln=1.2;
   }
 
-  function laneCountFor(n){ return Math.min(4+n, 10); }
+  function laneCountFor(n){ return Math.min(4+Math.ceil(n/2), 10); } // +1 lane every 2 levels (reaches 10 around level 11)
   function setupLevel(n){
     var L=laneCountFor(n);
     roadRows=[];
     for(var i=0;i<L;i++){ roadRows.push(1+Math.floor(i*10/L)); }
     lanes=[];
-    var baseSpeed=45+n*13;
+    var baseSpeed=Math.min(48+n*9, 170); // gentler speed ramp with a cap
     var count=Math.min(2+Math.floor((n-1)/3),4); // capped so initial spacing is always positive
-    var truckChance=Math.min(0.05+n*0.04,0.4);
+    var truckChance=Math.min(0.05+n*0.03,0.35);
     var spacing=C/count; // even initial spacing on the wrap loop
     for(var li=0;li<roadRows.length;li++){
       var r=roadRows[li];
