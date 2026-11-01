@@ -184,9 +184,10 @@
     roadRows=[];
     for(var i=0;i<L;i++){ roadRows.push(1+Math.floor(i*10/L)); }
     lanes=[];
-    var baseSpeed=Math.min(48+n*9, 170); // gentler speed ramp with a cap
-    var count=Math.min(2+Math.floor((n-1)/3),4); // capped so initial spacing is always positive
-    var truckChance=Math.min(0.05+n*0.03,0.35);
+    // Levels 1-5 as tuned; from level 6 onward only ~5% more difficulty per level (compounded), with a soft cap
+    var baseSpeed = n<=5 ? (48+n*9) : Math.min(93*Math.pow(1.05, n-5), 150);
+    var count=Math.min(2+Math.floor((n-1)/3),3); // capped at 3 vehicles per lane (no 4th-car density spike)
+    var truckChance=Math.min(0.05+n*0.025,0.3);
     var spacing=C/count; // even initial spacing on the wrap loop
     for(var li=0;li<roadRows.length;li++){
       var r=roadRows[li];
