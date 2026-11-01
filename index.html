@@ -93,6 +93,7 @@
 <script>
 (function(){
   var W=400, H=480, COLS=10, ROWS=12, CELL=40;
+  var C=520; // wrap-loop circumference (W + margin) used for spacing & car-following
   var canvas=document.getElementById('game');
   var ctx=canvas.getContext('2d');
   var state='menu';
@@ -164,20 +165,23 @@
     for(var i=0;i<L;i++){ roadRows.push(1+Math.floor(i*10/L)); }
     lanes=[];
     var baseSpeed=45+n*13;
-    var count=Math.min(2+Math.floor((n-1)/3),5);
+    var count=Math.min(2+Math.floor((n-1)/3),4); // capped so initial spacing is always positive
     var truckChance=Math.min(0.05+n*0.04,0.4);
+    var spacing=C/count; // even initial spacing on the wrap loop
     for(var li=0;li<roadRows.length;li++){
       var r=roadRows[li];
       var dir=(li%2===0)?1:-1;
       var sp=baseSpeed*(0.7+Math.random()*0.6)*(1+(li%3)*0.07);
       var cars=[];
-      var gap=W/count;
+      var offset=Math.random()*spacing;
       for(var ci=0;ci<count;ci++){
         var truck=Math.random()<truckChance;
+        var tSpeed=sp*(0.85+Math.random()*0.3)*(truck?0.8:1); // each vehicle has its own desired speed
+        var logical=(offset+ci*spacing)%C;
+        var sx=logical>W?logical-C:logical;
         cars.push({
-          x:ci*gap+Math.random()*60-30,
-          w:truck?96:62,
-          speed:sp*(truck?0.85:1),
+          logical:logical, x:sx, w:truck?96:62,
+          targetSpeed:tSpeed, speed:tSpeed,
           color:carColors[(Math.random()*carColors.length)|0],
           truck:truck
         });
@@ -317,13 +321,29 @@
   }
 
   function updateCars(dt){
+    var MIN_GAP=28, RELEASE_GAP=46; // hysteresis: follow when <28px, accelerate when >46px
     for(var i=0;i<lanes.length;i++){
-      var L=lanes[i];
-      for(var j=0;j<L.cars.length;j++){
-        var c=L.cars[j];
-        c.x+=c.speed*L.dir*dt;
-        if(L.dir>0&&c.x>W+30){ c.x=-c.w-Math.random()*160; }
-        if(L.dir<0&&c.x<-c.w-30){ c.x=W+Math.random()*160; }
+      var L=lanes[i], cs=L.cars, n=cs.length;
+      cs.sort(function(a,b){return a.logical-b.logical;}); // order along the loop
+      for(var j=0;j<n;j++){
+        var c=cs[j];
+        var ahead = L.dir>0 ? cs[(j+1)%n] : cs[(j-1+n)%n]; // vehicle directly in front
+        var raw = L.dir>0 ? ((ahead.logical-c.logical+C)%C) : ((c.logical-ahead.logical+C)%C);
+        var gap = raw - ahead.w; // distance from front of c to rear of ahead
+        if(gap < MIN_GAP){
+          c.speed = ahead.speed; // caught up -> match the slower vehicle ahead, no overlap
+          if(gap < 0){ // safety nudge (should never trigger)
+            if(L.dir>0) c.logical = ahead.logical - ahead.w - MIN_GAP;
+            else c.logical = ahead.logical + ahead.w + MIN_GAP;
+            if(c.logical<0) c.logical+=C; if(c.logical>=C) c.logical-=C;
+          }
+        } else if(gap > RELEASE_GAP){
+          c.speed = c.targetSpeed; // clear road -> back to own desired speed
+        }
+        c.logical += c.speed * L.dir * dt;
+        if(c.logical>=C) c.logical-=C;
+        if(c.logical<0) c.logical+=C;
+        c.x = c.logical>W ? c.logical-C : c.logical; // wrap to off-screen edge
       }
     }
   }
@@ -598,4 +618,3 @@
 })();
 </script>
 </body>
-</html>
