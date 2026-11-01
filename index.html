@@ -218,6 +218,8 @@
 
   function tryMove(dc,dr){
     if(state!=='playing'||paused) return;
+    // ANY input cancels the stun protection immediately (even if move is blocked or mid-animation)
+    if(chicken.stunned){ chicken.stunned=false; chicken.invuln=0; }
     // knockback roll is interruptible: player takes control immediately (no delay)
     if(chicken.knock && chicken.knock.active){
       chicken.x=chicken.knock.tx; chicken.y=chicken.knock.ty;
@@ -226,8 +228,6 @@
     if(chicken.moving) return;
     var nc=chicken.col+dc, nr=chicken.row+dr;
     if(nc<0||nc>=COLS||nr<0||nr>=ROWS) return;
-    // moving while stunned (side-hit protection) cancels the protection
-    if(chicken.stunned){ chicken.stunned=false; chicken.invuln=0; }
     chicken.col=nc; chicken.row=nr;
     chicken.tx=nc*CELL+CELL/2; chicken.ty=nr*CELL+CELL/2;
     chicken.moving=true;
@@ -250,7 +250,7 @@
   function hit(){
     lives--; sHit(); spawnFeathers(); updateHUD();
     if(lives<=0){ gameOver(); return; }
-    chicken.invuln=1.6;
+    chicken.invuln=0; // respawn is on safe grass — no stun/protection on new life
     chicken.col=Math.max(0,Math.min(COLS-1,chicken.col));
     chicken.row=11;
     chicken.x=chicken.tx=chicken.col*CELL+CELL/2;
